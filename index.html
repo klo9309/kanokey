@@ -1,0 +1,932 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kan Oke House — Renovation Budget</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Playfair+Display:wght@400;700&display=swap');
+
+  :root {
+    --bg: #f5f0e8;
+    --surface: #fffdf7;
+    --surface2: #f0ebe0;
+    --ink: #1a1410;
+    --ink2: #5a4f42;
+    --ink3: #9a8f82;
+    --accent: #c84b2f;
+    --accent2: #2e6b4f;
+    --warn: #e07b2a;
+    --border: #d8d0c0;
+    --essential: #2e6b4f;
+    --review: #e07b2a;
+    --skip: #c84b2f;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Mono', monospace;
+    background: var(--bg);
+    color: var(--ink);
+    min-height: 100vh;
+    padding: 0;
+  }
+
+  /* HEADER */
+  .header {
+    background: var(--ink);
+    color: var(--bg);
+    padding: 32px 40px 28px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    display: flex;
+    align-items: flex-end;
+    gap: 40px;
+    flex-wrap: wrap;
+  }
+
+  .header-left h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 26px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    line-height: 1;
+    margin-bottom: 6px;
+  }
+
+  .header-left p {
+    font-size: 11px;
+    color: #9a8f82;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .budget-panel {
+    margin-left: auto;
+    text-align: right;
+  }
+
+  .budget-numbers {
+    display: flex;
+    gap: 28px;
+    align-items: flex-end;
+    justify-content: flex-end;
+    margin-bottom: 10px;
+  }
+
+  .bnum {
+    text-align: right;
+  }
+
+  .bnum .label {
+    font-size: 10px;
+    color: #9a8f82;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 2px;
+  }
+
+  .bnum .value {
+    font-size: 22px;
+    font-weight: 500;
+    letter-spacing: -1px;
+  }
+
+  .bnum .value.adjusted { color: #f5f0e8; }
+  .bnum .value.budget-val { color: #9a8f82; }
+  .bnum .value.diff-over { color: #e07b2a; }
+  .bnum .value.diff-under { color: #6dba8a; }
+
+  .progress-bar {
+    width: 320px;
+    height: 6px;
+    background: #2a2520;
+    border-radius: 3px;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .progress-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.3s ease, background 0.3s ease;
+  }
+
+  /* MAIN */
+  .main {
+    padding: 32px 40px;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+
+  /* LEGEND */
+  .legend {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 28px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 11px;
+    color: var(--ink2);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+  }
+
+  .legend-note {
+    margin-left: auto;
+    font-size: 11px;
+    color: var(--ink3);
+  }
+
+  /* SECTION */
+  .section {
+    margin-bottom: 28px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    padding: 14px 20px;
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    user-select: none;
+    gap: 12px;
+  }
+
+  .section-num {
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    color: var(--ink3);
+    text-transform: uppercase;
+    min-width: 60px;
+  }
+
+  .section-name {
+    font-family: 'Playfair Display', serif;
+    font-size: 16px;
+    font-weight: 700;
+    flex: 1;
+  }
+
+  .section-subtotal {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--ink2);
+    min-width: 100px;
+    text-align: right;
+  }
+
+  .section-subtotal.changed {
+    color: var(--accent2);
+  }
+
+  .chevron {
+    font-size: 12px;
+    color: var(--ink3);
+    transition: transform 0.2s;
+    margin-left: 8px;
+  }
+
+  .section.collapsed .chevron { transform: rotate(-90deg); }
+
+  .section-body {
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+  }
+
+  .section.collapsed .section-body {
+    max-height: 0 !important;
+  }
+
+  /* ITEM ROW */
+  .item-row {
+    display: grid;
+    grid-template-columns: 28px 1fr 110px 100px 90px;
+    align-items: center;
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--border);
+    gap: 12px;
+    transition: background 0.15s;
+  }
+
+  .item-row:last-child { border-bottom: none; }
+  .item-row:hover { background: var(--surface2); }
+
+  .item-tag {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .item-name {
+    font-size: 12px;
+    color: var(--ink2);
+    line-height: 1.4;
+  }
+
+  .item-original {
+    font-size: 12px;
+    color: var(--ink3);
+    text-align: right;
+    text-decoration: line-through;
+    font-style: italic;
+  }
+
+  .item-original.no-change {
+    text-decoration: none;
+    font-style: normal;
+    color: var(--ink2);
+  }
+
+  .item-input-wrap {
+    position: relative;
+  }
+
+  .item-input-wrap span {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 12px;
+    color: var(--ink3);
+  }
+
+  .item-input {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 7px 10px 7px 22px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--ink);
+    text-align: right;
+    transition: border-color 0.2s, background 0.2s;
+  }
+
+  .item-input:focus {
+    outline: none;
+    border-color: var(--ink);
+    background: var(--surface);
+  }
+
+  .item-input.changed {
+    border-color: var(--accent2);
+    background: #f0faf5;
+  }
+
+  .item-input.zeroed {
+    border-color: var(--skip);
+    background: #fff5f3;
+    color: var(--skip);
+  }
+
+  .item-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .toggle-btn {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 5px 10px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--ink3);
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+
+  .toggle-btn:hover { border-color: var(--ink3); color: var(--ink2); }
+
+  .toggle-btn.zeroed {
+    background: #fff0ee;
+    border-color: var(--skip);
+    color: var(--skip);
+  }
+
+  /* NOTES */
+  .item-note {
+    grid-column: 2 / -1;
+    font-size: 11px;
+    color: var(--ink3);
+    padding: 4px 0 8px;
+    border-top: 1px dashed var(--border);
+    margin-top: 4px;
+    line-height: 1.6;
+    display: none;
+  }
+
+  .item-note.visible { display: block; }
+
+  /* HIDDEN COSTS */
+  .hidden-costs {
+    background: #fff9f0;
+    border: 1px solid #e8c87a;
+    border-radius: 4px;
+    padding: 20px 24px;
+    margin-bottom: 28px;
+  }
+
+  .hidden-costs h3 {
+    font-family: 'Playfair Display', serif;
+    font-size: 15px;
+    margin-bottom: 14px;
+    color: var(--warn);
+  }
+
+  .hc-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .hc-item {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    padding: 7px 10px;
+    background: #fff;
+    border: 1px solid #e8d8b0;
+    border-radius: 3px;
+  }
+
+  .hc-name { color: var(--ink2); }
+  .hc-amt { color: var(--warn); font-weight: 500; }
+
+  /* SUMMARY */
+  .summary {
+    background: var(--ink);
+    color: var(--bg);
+    border-radius: 4px;
+    padding: 28px 32px;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 24px;
+    margin-bottom: 28px;
+  }
+
+  .sum-block .label {
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #9a8f82;
+    margin-bottom: 6px;
+  }
+
+  .sum-block .value {
+    font-family: 'Playfair Display', serif;
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -1px;
+    line-height: 1;
+  }
+
+  .sum-block .sub {
+    font-size: 11px;
+    color: #9a8f82;
+    margin-top: 4px;
+  }
+
+  /* RESET */
+  .actions {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+  }
+
+  .btn {
+    padding: 10px 20px;
+    border-radius: 3px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    cursor: pointer;
+    letter-spacing: 0.05em;
+    transition: all 0.15s;
+    border: none;
+  }
+
+  .btn-primary {
+    background: var(--ink);
+    color: var(--bg);
+  }
+  .btn-primary:hover { background: #3a2e24; }
+
+  .btn-outline {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--ink2);
+  }
+  .btn-outline:hover { border-color: var(--ink); color: var(--ink); }
+
+  .btn-warn {
+    background: transparent;
+    border: 1px solid #e8c87a;
+    color: var(--warn);
+  }
+  .btn-warn:hover { background: #fff9f0; }
+
+  /* CHANGED ITEMS */
+  .changes-list {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 20px 24px;
+    margin-bottom: 28px;
+    display: none;
+  }
+
+  .changes-list.visible { display: block; }
+  .changes-list h3 {
+    font-family: 'Playfair Display', serif;
+    font-size: 15px;
+    margin-bottom: 14px;
+  }
+
+  .change-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px dashed var(--border);
+    font-size: 12px;
+  }
+
+  .change-item:last-child { border-bottom: none; }
+  .change-item .cn { color: var(--ink2); flex: 1; }
+  .change-item .co { color: var(--ink3); text-decoration: line-through; margin: 0 12px; }
+  .change-item .cn2 { color: var(--accent2); font-weight: 500; min-width: 80px; text-align: right; }
+  .change-item .cdiff { font-size: 11px; margin-left: 10px; }
+  .change-item .cdiff.save { color: var(--accent2); }
+  .change-item .cdiff.add { color: var(--skip); }
+
+  @media (max-width: 700px) {
+    .header { padding: 20px; gap: 20px; }
+    .main { padding: 20px; }
+    .item-row { grid-template-columns: 18px 1fr 90px 80px; }
+    .item-original { display: none; }
+    .budget-numbers { gap: 16px; }
+    .bnum .value { font-size: 16px; }
+    .progress-bar { width: 200px; }
+    .summary { grid-template-columns: 1fr 1fr; }
+    .hc-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <h1>Kan Oke House</h1>
+    <p>Renovation Budget · Concept Interior Design · Jan 2026</p>
+  </div>
+  <div class="budget-panel">
+    <div class="budget-numbers">
+      <div class="bnum">
+        <div class="label">Budget</div>
+        <div class="value budget-val">$800,000</div>
+      </div>
+      <div class="bnum">
+        <div class="label">Adjusted</div>
+        <div class="value adjusted" id="header-adjusted">$803,600</div>
+      </div>
+      <div class="bnum">
+        <div class="label">Difference</div>
+        <div class="value diff-over" id="header-diff">+$3,600</div>
+      </div>
+    </div>
+    <div class="progress-bar">
+      <div class="progress-fill" id="progress-fill" style="width:100.45%;background:#e07b2a;"></div>
+    </div>
+  </div>
+</div>
+
+<div class="main">
+
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:#2e6b4f"></div>Essential</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#e07b2a"></div>Review / Negotiate</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#c84b2f"></div>Consider Skipping</div>
+    <div class="legend-note">Edit any amount · Toggle items off · Watch total update live</div>
+  </div>
+
+  <div class="actions">
+    <button class="btn btn-outline" onclick="toggleAll(true)">↓ Expand All</button>
+    <button class="btn btn-outline" onclick="toggleAll(false)">↑ Collapse All</button>
+    <button class="btn btn-warn" onclick="applyRecommended()">✦ Apply My Recommendations</button>
+    <button class="btn btn-outline" onclick="resetAll()">↺ Reset to Original</button>
+  </div>
+
+  <div id="sections-container"></div>
+
+  <div class="changes-list" id="changes-list">
+    <h3>Your Changes</h3>
+    <div id="changes-body"></div>
+  </div>
+
+  <div class="summary">
+    <div class="sum-block">
+      <div class="label">Original Quote</div>
+      <div class="value">$803,600</div>
+      <div class="sub">38 line items</div>
+    </div>
+    <div class="sum-block">
+      <div class="label">Your Adjusted Total</div>
+      <div class="value" id="summary-adjusted" style="color:#f5a623">$803,600</div>
+      <div class="sub" id="summary-items">38 items active</div>
+    </div>
+    <div class="sum-block">
+      <div class="label">Savings / Over</div>
+      <div class="value" id="summary-diff" style="color:#e07b2a">+$3,600</div>
+      <div class="sub" id="summary-vs-budget">vs $800k budget</div>
+    </div>
+  </div>
+
+  <div class="hidden-costs">
+    <h3>⚠ Hidden Costs NOT in This Quote (Estimates)</h3>
+    <div class="hc-grid">
+      <div class="hc-item"><span class="hc-name">Tiles (kitchen, bathrooms, floors)</span><span class="hc-amt">$40–80k+</span></div>
+      <div class="hc-item"><span class="hc-name">Appliances (fridge, washer, oven…)</span><span class="hc-amt">$30–100k+</span></div>
+      <div class="hc-item"><span class="hc-name">Sanitary ware (toilets, basins, tubs)</span><span class="hc-amt">$20–60k+</span></div>
+      <div class="hc-item"><span class="hc-name">Timber floorboards</span><span class="hc-amt">$30–60k+</span></div>
+      <div class="hc-item"><span class="hc-name">Air conditioning</span><span class="hc-amt">$20–50k+</span></div>
+      <div class="hc-item"><span class="hc-name">Door knobs & hardware</span><span class="hc-amt">$3–10k+</span></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const BUDGET = 800000;
+
+const data = [
+  {
+    id: "s1", num: "1.0", name: "Demolition", tag: "essential",
+    items: [
+      { id: "1.1", name: "Remove all cabinets", original: 6500, tag: "essential", note: "Necessary to start everything." },
+      { id: "1.2", name: "Remove wall in kitchen/bathrooms", original: 14000, tag: "essential", note: "Structural — required for layout changes." },
+      { id: "1.3", name: "Remove flooring throughout flat", original: 6500, tag: "essential", note: "Required before new flooring." },
+      { id: "1.4", name: "Remove tiles (kitchen/bathrooms/floors)", original: 22000, tag: "essential", note: "Must remove before retiling." },
+      { id: "1.5", name: "Remove toilet bowls/sinks/bathtubs", original: 8000, tag: "essential", note: "Required before bathroom rebuild." },
+    ]
+  },
+  {
+    id: "s2", num: "2.0", name: "Kitchen / Laundry / Maid Area", tag: "review",
+    items: [
+      { id: "2.1", name: "Kitchen cabinets / island", original: 64000, tag: "essential", note: "Core kitchen feature. Discuss island size/style with sister." },
+      { id: "2.2", name: "Work top", original: 12000, tag: "essential", note: "Functional necessity." },
+      { id: "2.3", name: "Tiling labor (kitchen/laundry/maid)", original: 57000, tag: "review", note: "⚠ Get a per-sq-ft breakdown — compare against bathroom tiling rate (4.6 is $58.6k). May be inflated." },
+      { id: "2.4", name: "Glass panels / sliding doors", original: 25000, tag: "skip", note: "🔴 Aesthetic upgrade only. Skip or defer to Phase 2 to save $25k." },
+    ]
+  },
+  {
+    id: "s3", num: "3.0", name: "Built-in Furniture", tag: "review",
+    items: [
+      { id: "3.1", name: "Full-height shoe cabinet at entrance", original: 26000, tag: "skip", note: "🔴 A freestanding alternative costs $3–8k. Defer to Phase 2." },
+      { id: "3.2", name: "Sliding wood panels + shoe cabinet", original: 28000, tag: "skip", note: "🔴 Design feature only. Consider skipping entirely — saves $28k." },
+      { id: "3.3", name: "Master room closet (hanging racks/panels)", original: 32000, tag: "essential", note: "Functional necessity for master bedroom." },
+      { id: "3.4", name: "Full-height wardrobe in bedroom", original: 26000, tag: "essential", note: "Essential storage." },
+      { id: "3.5", name: "Sink/faucet/maid toilet/laundry tap install", original: 12000, tag: "essential", note: "Labor for sanitary fitting installation — essential." },
+    ]
+  },
+  {
+    id: "s4", num: "4.0", name: "Bathrooms", tag: "essential",
+    items: [
+      { id: "4.1", name: "Basin cabinets / mirror cabinets", original: 10000, tag: "essential", note: "Functional necessity." },
+      { id: "4.2", name: "Counter tops", original: 8000, tag: "essential", note: "Essential for bathroom functionality." },
+      { id: "4.3", name: "Sanitary ware installation", original: 6000, tag: "essential", note: "Labor only — must have." },
+      { id: "4.4", name: "Glass shower panels / doors", original: 20000, tag: "review", note: "🟡 Consider a curtain-rod alternative temporarily to save $15–18k." },
+      { id: "4.5", name: "Brick wall (guest + master toilet)", original: 8000, tag: "essential", note: "Structural privacy walls — required." },
+      { id: "4.6", name: "Tiling labor (wall & floor, bathrooms)", original: 58600, tag: "essential", note: "Essential. Do not cut — good waterproofing starts here." },
+    ]
+  },
+  {
+    id: "s5", num: "5.0", name: "Power Supply", tag: "essential",
+    items: [
+      { id: "5.1", name: "Sockets & lighting throughout", original: 88000, tag: "essential", note: "Non-negotiable — safety item." },
+      { id: "5.2", name: "MCB main fuse box", original: 7500, tag: "essential", note: "Required by code." },
+      { id: "5.3", name: "Appliances / light fixtures / fans install", original: 6000, tag: "essential", note: "Labor for installation." },
+      { id: "5.4", name: "Heater installation", original: 2500, tag: "essential", note: "Standard fixture." },
+    ]
+  },
+  {
+    id: "s6", num: "6.0", name: "Water Supply", tag: "essential",
+    items: [
+      { id: "6.1", name: "Water pipes (kitchen/toilets/balcony/laundry)", original: 30000, tag: "essential", note: "Behind-wall work — do it right once." },
+      { id: "6.2", name: "Drainage & sewage pipes", original: 12000, tag: "essential", note: "Essential structural plumbing." },
+      { id: "6.3", name: "Sewage for guest toilet bowl", original: 2500, tag: "essential", note: "Required for layout change." },
+    ]
+  },
+  {
+    id: "s7", num: "7.0", name: "General Items", tag: "review",
+    items: [
+      { id: "7.1", name: "Repaint the flat", original: 95000, tag: "review", note: "🚩 RED FLAG: $95k is very high for HK apartment repainting. Standard is $30–50k. Negotiate hard or get a competing quote. Potential saving: $40–60k." },
+      { id: "7.2", name: "Relocate guest room & toilet door", original: 4000, tag: "essential", note: "Required for new layout." },
+      { id: "7.3", name: "Refurbish all doors & frames (7 nos.)", original: 7000, tag: "essential", note: "~$1k/door — reasonable." },
+      { id: "7.4", name: "Cementation on floor for timber", original: 24000, tag: "essential", note: "Required base for timber flooring." },
+      { id: "7.5", name: "Timber laying + base board", original: 44000, tag: "essential", note: "Labor only — necessary." },
+      { id: "7.6", name: "Waterproofing (2 bathrooms + maid toilet)", original: 5000, tag: "essential", note: "Do NOT skip. $5k now vs $50k+ in water damage later." },
+      { id: "7.7", name: "Labor: carry wood panels to 8th floor", original: 4000, tag: "review", note: "🟡 If elevator available, negotiate down. Should be $1–2k max." },
+      { id: "7.8", name: "Waste/debris disposal", original: 6000, tag: "essential", note: "Standard and reasonable." },
+      { id: "7.9", name: "Insurance", original: 8500, tag: "essential", note: "Important — protects you during works." },
+      { id: "7.10", name: "General cleaning after works", original: 8000, tag: "essential", note: "Reasonable and necessary." },
+    ]
+  }
+];
+
+// State
+const state = {};
+data.forEach(section => {
+  section.items.forEach(item => {
+    state[item.id] = { value: item.original, active: true };
+  });
+});
+
+const tagColors = { essential: "#2e6b4f", review: "#e07b2a", skip: "#c84b2f" };
+
+function fmt(n) {
+  return "$" + Math.round(n).toLocaleString();
+}
+
+function buildUI() {
+  const container = document.getElementById("sections-container");
+  container.innerHTML = "";
+
+  data.forEach(section => {
+    const el = document.createElement("div");
+    el.className = "section";
+    el.id = section.id;
+
+    const subtotal = section.items.reduce((a, item) => a + (state[item.id].active ? state[item.id].value : 0), 0);
+    const origSubtotal = section.items.reduce((a, item) => a + item.original, 0);
+    const changed = subtotal !== origSubtotal;
+
+    el.innerHTML = `
+      <div class="section-header" onclick="toggleSection('${section.id}')">
+        <span class="section-num">${section.num}</span>
+        <span class="section-name">${section.name}</span>
+        <span class="section-subtotal ${changed ? 'changed' : ''}" id="sub-${section.id}">${fmt(subtotal)}</span>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="section-body" id="body-${section.id}">
+        ${section.items.map(item => buildItemRow(item)).join("")}
+      </div>
+    `;
+
+    const body = el.querySelector('.section-body');
+    body.style.maxHeight = body.scrollHeight + 'px';
+    container.appendChild(el);
+  });
+}
+
+function buildItemRow(item) {
+  const s = state[item.id];
+  const isChanged = s.value !== item.original;
+  const isZeroed = !s.active;
+  const inputClass = isZeroed ? "item-input zeroed" : (isChanged ? "item-input changed" : "item-input");
+  const origClass = isChanged ? "item-original" : "item-original no-change";
+
+  return `
+    <div class="item-row" id="row-${item.id}">
+      <div class="item-tag" style="background:${tagColors[item.tag]}"></div>
+      <div>
+        <div class="item-name">${item.id} &nbsp;${item.name}</div>
+        ${item.note ? `<div class="item-note ${item.note ? 'visible' : ''}" id="note-${item.id}" style="display:none">${item.note}</div>` : ''}
+        <div style="margin-top:4px;font-size:10px;color:var(--ink3);cursor:pointer;" onclick="toggleNote('${item.id}')">▸ details</div>
+      </div>
+      <div class="${origClass}">${fmt(item.original)}</div>
+      <div class="item-input-wrap">
+        <span>$</span>
+        <input 
+          type="number" 
+          class="${inputClass}" 
+          id="inp-${item.id}" 
+          value="${Math.round(s.value)}" 
+          ${isZeroed ? 'disabled' : ''}
+          onchange="updateItem('${item.id}', this.value)"
+          oninput="updateItem('${item.id}', this.value)"
+        >
+      </div>
+      <div class="item-toggle">
+        <button class="toggle-btn ${isZeroed ? 'zeroed' : ''}" id="tog-${item.id}" onclick="toggleItem('${item.id}')">
+          ${isZeroed ? '+ Include' : '✕ Remove'}
+        </button>
+      </div>
+    </div>
+  `;
+}
+
+function toggleNote(id) {
+  const note = document.getElementById(`note-${id}`);
+  if (note) {
+    note.style.display = note.style.display === 'none' ? 'block' : 'none';
+  }
+}
+
+function toggleSection(id) {
+  const el = document.getElementById(id);
+  const body = document.getElementById(`body-${id}`);
+  if (el.classList.contains('collapsed')) {
+    el.classList.remove('collapsed');
+    body.style.maxHeight = body.scrollHeight + 'px';
+  } else {
+    el.classList.add('collapsed');
+    body.style.maxHeight = '0';
+  }
+}
+
+function toggleAll(expand) {
+  data.forEach(s => {
+    const el = document.getElementById(s.id);
+    const body = document.getElementById(`body-${s.id}`);
+    if (expand) {
+      el.classList.remove('collapsed');
+      body.style.maxHeight = body.scrollHeight + 'px';
+    } else {
+      el.classList.add('collapsed');
+      body.style.maxHeight = '0';
+    }
+  });
+}
+
+function updateItem(id, val) {
+  const num = parseFloat(val) || 0;
+  state[id].value = num;
+  refreshRow(id);
+  recalculate();
+}
+
+function toggleItem(id) {
+  state[id].active = !state[id].active;
+  if (!state[id].active) {
+    state[id].value = 0;
+  } else {
+    // Restore original
+    const item = findItem(id);
+    state[id].value = item.original;
+  }
+  refreshRow(id);
+  recalculate();
+}
+
+function findItem(id) {
+  for (const s of data) {
+    for (const item of s.items) {
+      if (item.id === id) return item;
+    }
+  }
+}
+
+function refreshRow(id) {
+  const item = findItem(id);
+  const s = state[id];
+  const row = document.getElementById(`row-${id}`);
+  if (!row) return;
+  const inp = document.getElementById(`inp-${id}`);
+  const tog = document.getElementById(`tog-${id}`);
+  
+  if (inp) {
+    inp.value = Math.round(s.value);
+    inp.disabled = !s.active;
+    inp.className = !s.active ? "item-input zeroed" : (s.value !== item.original ? "item-input changed" : "item-input");
+  }
+  if (tog) {
+    tog.className = `toggle-btn ${!s.active ? 'zeroed' : ''}`;
+    tog.textContent = !s.active ? '+ Include' : '✕ Remove';
+  }
+}
+
+function recalculate() {
+  let total = 0;
+  let activeCount = 0;
+
+  data.forEach(section => {
+    let sub = 0;
+    section.items.forEach(item => {
+      if (state[item.id].active) {
+        sub += state[item.id].value;
+        activeCount++;
+      }
+    });
+    total += sub;
+
+    const subEl = document.getElementById(`sub-${section.id}`);
+    const origSub = section.items.reduce((a, i) => a + i.original, 0);
+    if (subEl) {
+      subEl.textContent = fmt(sub);
+      subEl.className = `section-subtotal ${sub !== origSub ? 'changed' : ''}`;
+    }
+  });
+
+  const diff = total - BUDGET;
+  const pct = Math.min((total / BUDGET) * 100, 130);
+
+  // Header
+  document.getElementById('header-adjusted').textContent = fmt(total);
+  const diffEl = document.getElementById('header-diff');
+  diffEl.textContent = (diff >= 0 ? '+' : '') + fmt(Math.abs(diff));
+  diffEl.className = `value ${diff > 0 ? 'diff-over' : 'diff-under'}`;
+
+  // Progress
+  const bar = document.getElementById('progress-fill');
+  bar.style.width = Math.min(pct, 100) + '%';
+  bar.style.background = diff > 0 ? '#e07b2a' : '#2e6b4f';
+
+  // Summary
+  document.getElementById('summary-adjusted').textContent = fmt(total);
+  document.getElementById('summary-adjusted').style.color = diff > 0 ? '#e07b2a' : '#6dba8a';
+  document.getElementById('summary-items').textContent = `${activeCount} items active`;
+  const sumDiff = document.getElementById('summary-diff');
+  sumDiff.textContent = (diff >= 0 ? '+' : '-') + fmt(Math.abs(diff));
+  sumDiff.style.color = diff > 0 ? '#e07b2a' : '#6dba8a';
+
+  updateChangesList();
+}
+
+function updateChangesList() {
+  const changes = [];
+  data.forEach(section => {
+    section.items.forEach(item => {
+      const s = state[item.id];
+      if (!s.active || s.value !== item.original) {
+        changes.push({ item, state: s });
+      }
+    });
+  });
+
+  const listEl = document.getElementById('changes-list');
+  const bodyEl = document.getElementById('changes-body');
+
+  if (changes.length === 0) {
+    listEl.classList.remove('visible');
+    return;
+  }
+
+  listEl.classList.add('visible');
+  bodyEl.innerHTML = changes.map(({ item, state: s }) => {
+    const diff = (s.active ? s.value : 0) - item.original;
+    return `<div class="change-item">
+      <span class="cn">${item.id} ${item.name}</span>
+      <span class="co">${fmt(item.original)}</span>
+      <span class="cn2">${s.active ? fmt(s.value) : 'REMOVED'}</span>
+      <span class="cdiff ${diff < 0 ? 'save' : 'add'}">${diff < 0 ? '−' : '+'}${fmt(Math.abs(diff))}</span>
+    </div>`;
+  }).join('');
+}
+
+function applyRecommended() {
+  // Repaint: reduce from 95k to 50k
+  state['7.1'].value = 50000; state['7.1'].active = true;
+  // Glass panels: remove
+  state['2.4'].active = false; state['2.4'].value = 0;
+  // Shoe cabinet: remove
+  state['3.1'].active = false; state['3.1'].value = 0;
+  // Sliding wood panels: remove
+  state['3.2'].active = false; state['3.2'].value = 0;
+  // Wood panel carrying: reduce
+  state['7.7'].value = 1500; state['7.7'].active = true;
+
+  buildUI();
+  recalculate();
+}
+
+function resetAll() {
+  data.forEach(s => {
+    s.items.forEach(item => {
+      state[item.id] = { value: item.original, active: true };
+    });
+  });
+  buildUI();
+  recalculate();
+}
+
+// Init
+buildUI();
+recalculate();
+</script>
+</body>
+</html>
